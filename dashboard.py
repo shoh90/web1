@@ -51,9 +51,16 @@ def compare_data(previous_data, prediction_data):
     # 히스토그램
     st.subheader("📊 번호 분포 비교")
     plt.figure(figsize=(10, 5))
-    plt.hist(당첨_번호, bins=range(1, 47), alpha=0.7, label="이전 당첨 번호")
-    plt.hist(예측_번호, bins=range(1, 47), alpha=0.7, label="예측 번호")
+    plt.hist(
+        [당첨_번호, 예측_번호], 
+        bins=range(1, 48), 
+        alpha=0.7, 
+        label=["이전 당첨 번호", "예측 번호"],
+        color=["blue", "orange"], 
+        edgecolor="black"
+    )
     plt.legend(loc="upper right")
+    plt.xticks(range(1, 47))
     plt.xlabel("번호")
     plt.ylabel("빈도")
     plt.title("번호 분포 비교")
