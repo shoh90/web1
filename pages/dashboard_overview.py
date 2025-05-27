@@ -1,26 +1,45 @@
 """
-대시보드 개요 페이지 (단독 실행 버전, 안정형)
+대시보드 개요 페이지 (CSV 연동 + 확장 기능)
 """
 
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import random
+import numpy as np
+
+CSV_PATH = "premium_remember_jobs_20250527_220128.csv"
 
 def render_dashboard_overview(candidates_df: pd.DataFrame, interview_df: pd.DataFrame):
     st.header("📊 대시보드 개요")
     st.markdown("### 오늘의 채용 현황과 주요 활동을 한눈에 확인하세요")
 
+    # 🔍 필터 추가
+    with st.sidebar:
+        st.subheader("🔧 필터 설정")
+        position_options = candidates_df['position'].unique().tolist()
+        position_filter = st.multiselect("직무 선택", position_options, default=position_options)
+
+        status_options = candidates_df['status'].unique().tolist()
+        status_filter = st.multiselect("진행 상태 선택", status_options, default=status_options)
+
+    filtered_df = candidates_df[
+        (candidates_df['position'].isin(position_filter)) &
+        (candidates_df['status'].isin(status_filter))
+    ]
+
+    filtered_interviews = interview_df[interview_df['name'].isin(filtered_df['name'])]
+
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        render_today_metrics(candidates_df)
-        render_upcoming_interviews(interview_df)
+        render_today_metrics(filtered_df)
+        render_upcoming_interviews(filtered_interviews)
 
     with col2:
-        render_recent_activities(candidates_df)
+        render_recent_activities(filtered_df)
         render_today_todos()
-        render_notifications(candidates_df)
+        render_notifications(filtered_df)
 
 def render_today_metrics(candidates_df: pd.DataFrame):
     st.subheader("📊 오늘의 주요 지표")
@@ -84,19 +103,23 @@ def render_notifications(candidates_df: pd.DataFrame):
 
 if __name__ == "__main__":
     st.set_page_config(page_title="📊 대시보드 개요", layout="wide")
-    st.markdown("<h1 style='text-align:center;'>📊 대시보드 개요 (단독 실행)</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center;'>📊 대시보드 개요 (CSV 연동)</h1>", unsafe_allow_html=True)
 
-    sample_candidates = pd.DataFrame({
-        'name': ['김민수', '이지은', '박준호'],
-        'position': ['프론트엔드 개발자', '디자이너', '데이터 분석가'],
-        'status': ['1차 면접', '최종 면접', '서류 심사'],
-        'applied_date': [datetime.now(), datetime.now() - timedelta(days=1), datetime.now() - timedelta(days=2)],
-        'resume_score': [85, 92, 78],
-        'rating': [4.7, 4.9, 4.3],
-        'email': ['minsu@email.com', 'jieun@email.com', 'junho@email.com']
-    })
+    try:
+        raw_df = pd.read_csv(CSV_PATH)
+        df_dashboard = pd.DataFrame({
+            'name': raw_df['회사명'],
+            'position': raw_df['직무'],
+            'status': np.random.choice(['서류 심사', '1차 면접', '2차 면접', '최종 면접', '합격', '불합격'], len(raw_df)),
+            'applied_date': pd.to_datetime(raw_df['공고시작일'], errors='coerce'),
+            'resume_score': np.random.randint(70, 95, len(raw_df)),
+            'rating': np.round(np.random.uniform(3.5, 5.0, len(raw_df)), 1),
+            'email': raw_df['회사명'].str.replace(" ", "").str.lower() + "@email.com"
+        })
 
-    sample_interviews = sample_candidates[sample_candidates['status'].isin(['1차 면접', '2차 면접', '최종 면접'])].copy()
-    sample_interviews['interview_date'] = [datetime.now() + timedelta(days=i) for i in range(1, len(sample_interviews)+1)]
+        sample_interviews = df_dashboard[df_dashboard['status'].isin(['1차 면접', '2차 면접', '최종 면접'])].copy()
+        sample_interviews['interview_date'] = [datetime.now() + timedelta(days=i) for i in range(1, len(sample_interviews)+1)]
 
-    render_dashboard_overview(sample_candidates, sample_interviews)
+        render_dashboard_overview(df_dashboard, sample_interviews)
+    except Exception as e:
+        st.error(f"❌ CSV 불러오기 실패: {e}")
