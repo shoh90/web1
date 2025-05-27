@@ -36,7 +36,6 @@ redis==5.0.1
 memcached==1.59
 
 # 이메일 발송
-smtplib
 email-validator==2.1.0
 
 # 파일 처리
