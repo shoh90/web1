@@ -83,7 +83,7 @@ def render_notifications(candidates_df: pd.DataFrame):
             st.warning(f"⚠️ {row['name']} – 이력서 점수 {row['resume_score']}점 / {row['position']}")
 
 if __name__ == "__main__":
-    st.set_page_config(page_title="📈 대시보드 개요", layout="wide")
+    st.set_page_config(page_title="대시보드 개요", layout="wide")
 
     st.markdown("<h1 style='text-align:center;'>📈 대시보드 개요</h1>", unsafe_allow_html=True)
 
