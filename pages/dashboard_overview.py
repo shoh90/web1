@@ -1,5 +1,5 @@
 """
-대시보드 개요 페이지 (CSV 연동 + 확장 기능)
+대시보드 개요 페이지 (CSV 연동 + 업로드 + 상세 보기 확장)
 """
 
 import streamlit as st
@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import random
 import numpy as np
 
-CSV_PATH = "premium_remember_jobs_20250527_220128.csv"
+DEFAULT_CSV_PATH = "premium_remember_jobs_20250527_220128.csv"
 
 def render_dashboard_overview(candidates_df: pd.DataFrame, interview_df: pd.DataFrame):
     st.header("📊 대시보드 개요")
@@ -40,6 +40,9 @@ def render_dashboard_overview(candidates_df: pd.DataFrame, interview_df: pd.Data
         render_recent_activities(filtered_df)
         render_today_todos()
         render_notifications(filtered_df)
+
+    st.markdown("---")
+    render_candidate_detail_table(filtered_df)
 
 def render_today_metrics(candidates_df: pd.DataFrame):
     st.subheader("📊 오늘의 주요 지표")
@@ -101,25 +104,44 @@ def render_notifications(candidates_df: pd.DataFrame):
         for _, row in high_score.iterrows():
             st.warning(f"⚠️ {row['name']} – 이력서 점수 {row['resume_score']}점 / {row['position']}")
 
+def render_candidate_detail_table(filtered_df):
+    st.subheader("📋 지원자 상세 보기")
+    for _, row in filtered_df.iterrows():
+        with st.expander(f"👤 {row['name']} - {row['position']} (점수: {row['resume_score']})"):
+            st.write(f"📧 이메일: {row['email']}")
+            st.write(f"📆 지원일: {row['applied_date'].strftime('%Y-%m-%d') if pd.notnull(row['applied_date']) else 'N/A'}")
+            st.write(f"⭐ 평점: {row['rating']}")
+            st.write(f"📋 상태: {row['status']}")
+
+def load_csv_data(uploaded_file):
+    raw_df = pd.read_csv(uploaded_file)
+    df_dashboard = pd.DataFrame({
+        'name': raw_df['회사명'],
+        'position': raw_df['직무'],
+        'status': np.random.choice(['서류 심사', '1차 면접', '2차 면접', '최종 면접', '합격', '불합격'], len(raw_df)),
+        'applied_date': pd.to_datetime(raw_df['공고시작일'], errors='coerce'),
+        'resume_score': np.random.randint(70, 95, len(raw_df)),
+        'rating': np.round(np.random.uniform(3.5, 5.0, len(raw_df)), 1),
+        'email': raw_df['회사명'].str.replace(" ", "").str.lower() + "@email.com"
+    })
+    interview_df = df_dashboard[df_dashboard['status'].isin(['1차 면접', '2차 면접', '최종 면접'])].copy()
+    interview_df['interview_date'] = [datetime.now() + timedelta(days=i) for i in range(1, len(interview_df)+1)]
+    return df_dashboard, interview_df
+
 if __name__ == "__main__":
     st.set_page_config(page_title="📊 대시보드 개요", layout="wide")
-    st.markdown("<h1 style='text-align:center;'>📊 대시보드 개요 (CSV 연동)</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center;'>📊 대시보드 개요 (CSV 업로드 + 상세 보기)</h1>", unsafe_allow_html=True)
+
+    st.sidebar.title("📁 CSV 업로드")
+    uploaded_file = st.sidebar.file_uploader("CSV 파일을 업로드하세요", type=["csv"])
 
     try:
-        raw_df = pd.read_csv(CSV_PATH)
-        df_dashboard = pd.DataFrame({
-            'name': raw_df['회사명'],
-            'position': raw_df['직무'],
-            'status': np.random.choice(['서류 심사', '1차 면접', '2차 면접', '최종 면접', '합격', '불합격'], len(raw_df)),
-            'applied_date': pd.to_datetime(raw_df['공고시작일'], errors='coerce'),
-            'resume_score': np.random.randint(70, 95, len(raw_df)),
-            'rating': np.round(np.random.uniform(3.5, 5.0, len(raw_df)), 1),
-            'email': raw_df['회사명'].str.replace(" ", "").str.lower() + "@email.com"
-        })
-
-        sample_interviews = df_dashboard[df_dashboard['status'].isin(['1차 면접', '2차 면접', '최종 면접'])].copy()
-        sample_interviews['interview_date'] = [datetime.now() + timedelta(days=i) for i in range(1, len(sample_interviews)+1)]
+        if uploaded_file:
+            df_dashboard, sample_interviews = load_csv_data(uploaded_file)
+        else:
+            raw_df = pd.read_csv(DEFAULT_CSV_PATH)
+            df_dashboard, sample_interviews = load_csv_data(DEFAULT_CSV_PATH)
 
         render_dashboard_overview(df_dashboard, sample_interviews)
     except Exception as e:
-        st.error(f"❌ CSV 불러오기 실패: {e}")
+        st.error(f"❌ 데이터 로딩 실패: {e}")
