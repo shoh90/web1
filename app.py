@@ -138,7 +138,7 @@ def generate_sample_data():
 # 메인 앱
 def main():
     # 헤더
-    st.markdown('<h1 class="main-header">🎯 종합 채용 대시보드</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">📌 종합 채용 대시보드</h1>', unsafe_allow_html=True)
     st.markdown("### 데이터 기반 채용 인사이트로 더 나은 인재 확보 전략을 수립하세요")
     
     # 데이터 로드
